@@ -1,0 +1,114 @@
+#!/usr/bin/env node
+const figlet = require("figlet");
+const lolcatjs = require("lolcatjs");
+const { program } = require("commander");
+const chalk = require("chalk");
+const _version = require("../package.json").version;
+const json2ts = require("json2ts");
+const inquirer = require("inquirer");
+const shelljs = require("shelljs");
+const download = require("download-git-repo");
+const ora = require("ora");
+// 渐变色随机
+lolcatjs.options.seed = Math.round(Math.random() * 1000);
+// lolcatjs.options.colors = true;
+const figStr = figlet.textSync("Hello World");
+const input = `www.crise1993.com \n ${figStr}`;
+
+// 输出版本号
+program.version(_version);
+// 配置命令参数
+program.option("c, create", "create template");
+// program.option("-i, --information", "view cli information")
+// .action(()=>{
+// // 输出五彩图案（ASCII转图案）
+// lolcatjs.fromString(input);
+// });
+
+const directory = {
+  create(env) {
+    // console.log(program.opts());
+    inquirer
+      .prompt([
+        {
+          type: "text",
+          name: "dirname",
+          message: "请输入文件夹名称："
+        },
+        {
+          type: "list",
+          name: "kind",
+          message: "请选择开发语言",
+          choices: ["Typescript", "JavaScript", "Ecmascript"]
+        }
+      ])
+      .then(answers => {
+        console.log(answers.dirname);
+        // Use user feedback for... whatever!!
+        const path = shelljs.pwd().stdout;
+        const dirPath = `${path}/${answers.dirname}`;
+        shelljs.rm("-rf", dirPath);
+        shelljs.mkdir(dirPath);
+        const spinner = ora(`${answers.dirname}：create wzh-cli ${answers.kind} template`);
+        spinner.start();
+        // 在文件夹内下载git仓库
+        download(
+          "direct:https://github.com/tj/commander.js.git",
+          dirPath,
+          { clone: true },
+          (err) => {
+            spinner.stop();
+            if (err) {
+              console.log(chalk.red(`模板下载失败！`));
+            } else {
+              shelljs.sed(
+                "-i",
+                "vue-element-admin",
+                answers.dirname,
+                `${dirPath}/package.json`
+              );
+            }
+          }
+        );
+      })
+      .catch(error => {
+        if (error.isTtyError) {
+          // Prompt couldn't be rendered in the current environment
+        } else {
+          // Something else when wrong
+        }
+      });
+  },
+  json2ts(url) {
+    // fetch(url)
+    const data = {
+      name: "jack",
+      age: 13,
+      school: {
+        class: [1, 2, 3] || 123
+      }
+    };
+    const dataStr = JSON.stringify(data);
+    console.log(json2ts.convert(dataStr));
+  }
+};
+program
+  .name("wzh")
+  .usage("<cmd> [env]")
+  .arguments("<cmd> [env]")
+  .action(function(cmd, env) {
+    const handler = directory[cmd];
+    if (handler) {
+      handler(env);
+    } else {
+      console.log(
+        `<${chalk.red(cmd)}>命令 [${chalk.red(env)}]参数, ${chalk.blue(
+          "暂不支持"
+        )}`
+      );
+    }
+  });
+// 输出五彩图案（ASCII转图案）
+lolcatjs.fromString(input);
+// 解析命令行输入参数
+program.parse(process.argv);
